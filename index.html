@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>پازل کسرها - طراحی شده توسط بدر</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Vazirmatn', 'IRANSans', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #f5f7fa, #e4edf9);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .stats {
+      margin-bottom: 15px;
+      color: #2980b9;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    #btn-light { background-color: #4a90e2; color: white; }
+    #btn-unit { background-color: #50c878; color: white; }
+    #btn-improper { background-color: #f9d71c; color: #222; }
+    #btn-mixed { background-color: #e74c3c; color: white; }
+
+    #btn-guide, #btn-reset {
+      background-color: #9b59b6;
+      color: white;
+    }
+
+    .timer-box {
+      background: #2c3e50;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 10px;
+      max-width: 600px;
+      width: 100%;
+    }
+
+    .cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: white;
+      border: 2px solid #ccc;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      padding: 8px;
+      text-align: center;
+    }
+
+    .fraction {
+      display: inline-block;
+      line-height: 1.2;
+    }
+
+    .fraction sup, .fraction sub {
+      display: block;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .fraction sup {
+      padding-bottom: 2px;
+      border-bottom: 1px solid #333;
+    }
+
+    .mixed {
+      display: inline-block;
+      direction: ltr;
+    }
+
+    .cell:hover {
+      transform: scale(1.05);
+    }
+
+    .cell.correct {
+      animation: pulse 0.5s;
+    }
+
+    .cell.wrong {
+      animation: shake 0.5s;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    .guide-modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .guide-content {
+      background: white;
+      padding: 25px;
+      border-radius: 15px;
+      max-width: 90%;
+      width: 500px;
+      direction: rtl;
+      text-align: right;
+    }
+
+    .guide-content h2 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .guide-content p {
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+
+    .close-guide {
+      margin-top: 15px;
+      padding: 8px 16px;
+      background: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .footer {
+      margin-top: 20px;
+      color: #7f8c8d;
+      font-size: 14px;
+    }
+  </style>
+  <link href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css" rel="stylesheet">
+</head>
+<body>
+  <h1>پازل انواع کسرها</h1>
+
+  <div class="stats" id="bestTime">بهترین زمان: —</div>
+
+  <div class="timer-box">زمان باقی‌مانده: <span id="timer">۱۲۰</span> ثانیه</div>
+
+  <div class="controls">
+    <button id="btn-light" class="btn">کسر سبک (کوچک‌تر از واحد)</button>
+    <button id="btn-unit" class="btn">کسر برابر واحد</button>
+    <button id="btn-improper" class="btn">کسر سنگین (بزرگتر از واحد)</button>
+    <button id="btn-mixed" class="btn">عدد مخلوط</button>
+    <button id="btn-guide" class="btn">راهنما</button>
+    <button id="btn-reset" class="btn">شروع دوباره</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="footer">طراحی شده توسط بدر</div>
+
+  <div class="guide-modal" id="guideModal">
+    <div class="guide-content">
+      <h2>راهنمای بازی</h2>
+      <p>🔹 <strong>کسر سبک (کوچک‌تر از واحد)</strong>: صورت کوچک‌تر از مخرج است (مثل <span class="fraction"><sup>۲</sup><sub>۵</sub></span>).</p>
+      <p>🔹 <strong>کسر برابر واحد</strong>: صورت و مخرج برابرند (مثل <span class="fraction"><sup>۳</sup><sub>۳</sub></span>).</p>
+      <p>🔹 <strong>کسر سنگین (بزرگتر از واحد)</strong>: صورت بزرگ‌تر از مخرج است (مثل <span class="fraction"><sup>۷</sup><sub>۴</sub></span>).</p>
+      <p>🔹 <strong>عدد مخلوط</strong>: شامل عدد صحیح و کسر است (مثل <span class="mixed">۱ <span class="fraction"><sup>۲</sup><sub>۳</sub></span></span>).</p>
+      <p>✅ روی دکمه نوع کسر کلیک کنید، سپس روی خانه‌های جدول کلیک کنید تا آن‌ها را انتخاب کنید.</p>
+      <p>❌ اگر اشتباه انتخاب کنید، خانه لرزش می‌کند و صدای اشتباه پخش می‌شود!</p>
+      <button class="close-guide" id="closeGuide">بستن</button>
+    </div>
+  </div>
+
+  <!-- صداها (به صورت Base64 برای عدم نیاز به فایل خارجی) -->
+  <audio id="soundCorrect" preload="auto">
+    <source src="data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV" type="audio/mpeg"/>
+  </audio>
+  <audio id="soundWrong" preload="auto">
+    <source src="data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWdTb3VuZEJhbmsuY29tIC8gTGFTb25vdGhlcXVlLm9yZwBURU5DAAAAHQAAA1N3aXRjaCBQbHVzIMKpIE5DSCBTb2Z0d2FyZQBUSVQyAAAABgAAAzIyMzUAVFNTRQAAAA8AAANMYXZmNTcuODMuMTAwAAAAAAAAAAAAAAD/80DEAAAAA0gAAAAATEFNRTMuMTAwVVVVVVVVVVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRbAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV" type="audio/mpeg"/>
+  </audio>
+
+  <script>
+    // تبدیل عدد انگلیسی به فارسی
+    function toPersianDigits(str) {
+      const enDigits = '0123456789';
+      const faDigits = '۰۱۲۳۴۵۶۷۸۹';
+      return str.replace(/[0-9]/g, d => faDigits[enDigits.indexOf(d)]);
+    }
+
+    function makeFraction(numerator, denominator) {
+      const num = toPersianDigits(String(numerator));
+      const den = toPersianDigits(String(denominator));
+      return `<span class="fraction"><sup>${num}</sup><sub>${den}</sub></span>`;
+    }
+
+    function makeMixed(whole, numerator, denominator) {
+      const w = toPersianDigits(String(whole));
+      const frac = makeFraction(numerator, denominator);
+      return `<span class="mixed">${w} ${frac}</span>`;
+    }
+
+    const fractionData = {
+      light: [[1,2], [2,3], [3,4], [1,5], [4,7], [5,9]],
+      unit: [[1,1], [2,2], [3,3], [4,4], [5,5], [6,6]],
+      improper: [[5,2], [7,3], [9,4], [10,6], [11,5], [8,3]],
+      mixed: [[1,1,2], [2,1,3], [3,2,5], [1,3,4], [2,2,7], [4,1,6]]
+    };
+
+    const fractions = {
+      light: fractionData.light.map(([n,d]) => makeFraction(n,d)),
+      unit: fractionData.unit.map(([n,d]) => makeFraction(n,d)),
+      improper: fractionData.improper.map(([n,d]) => makeFraction(n,d)),
+      mixed: fractionData.mixed.map(([w,n,d]) => makeMixed(w,n,d))
+    };
+
+    const colors = {
+      light: '#4a90e2',
+      unit: '#50c878',
+      improper: '#f9d71c',
+      mixed: '#e74c3c'
+    };
+
+    let selectedType = null;
+    let timer = 120;
+    let startTime = null;
+    let timerInterval = null;
+    let allFractions = [];
+
+    const grid = document.getElementById('grid');
+    const timerDisplay = document.getElementById('timer');
+    const bestTimeDisplay = document.getElementById('bestTime');
+    const guideModal = document.getElementById('guideModal');
+    const soundCorrect = document.getElementById('soundCorrect');
+    const soundWrong = document.getElementById('soundWrong');
+
+    // بارگذاری بهترین زمان
+    function loadBestTime() {
+      const best = localStorage.getItem('fractionPuzzleBestTime');
+      if (best) {
+        bestTimeDisplay.textContent = `بهترین زمان: ${toPersianDigits(best)} ثانیه`;
+      } else {
+        bestTimeDisplay.textContent = 'بهترین زمان: —';
+      }
+    }
+
+    function prepareFractions() {
+      allFractions = [];
+      for (const type in fractions) {
+        fractions[type].forEach(html => {
+          allFractions.push({ html, type });
+        });
+      }
+      shuffleArray(allFractions);
+    }
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function renderGrid() {
+      grid.innerHTML = '';
+      allFractions.forEach(item => {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.innerHTML = item.html;
+        cell.dataset.type = item.type;
+        cell.addEventListener('click', () => handleCellClick(cell, item.type));
+        grid.appendChild(cell);
+      });
+    }
+
+    function playSound(type) {
+      try {
+        if (type === 'correct') {
+          soundCorrect.currentTime = 0;
+          soundCorrect.play().catch(e => console.log("صدا پخش نشد:", e));
+        } else if (type === 'wrong') {
+          soundWrong.currentTime = 0;
+          soundWrong.play().catch(e => console.log("صدا پخش نشد:", e));
+        }
+      } catch (e) {
+        console.warn("خطا در پخش صدا:", e);
+      }
+    }
+
+    function handleCellClick(cell, correctType) {
+      if (!selectedType) {
+        alert('لطفاً ابتدا نوع کسر را انتخاب کنید!');
+        return;
+      }
+
+      if (selectedType === correctType) {
+        cell.style.backgroundColor = colors[selectedType];
+        cell.style.borderColor = colors[selectedType];
+        cell.classList.add('correct');
+        playSound('correct');
+        checkWin();
+      } else {
+        cell.classList.add('wrong');
+        playSound('wrong');
+        setTimeout(() => cell.classList.remove('wrong'), 500);
+      }
+    }
+
+    function checkWin() {
+      const allCells = document.querySelectorAll('.cell');
+      const allCorrect = Array.from(allCells).every(cell => {
+        const type = cell.dataset.type;
+        const bgColor = getComputedStyle(cell).backgroundColor;
+        const expectedColor = colors[type];
+        const expectedRgb = hexToRgb(expectedColor);
+        const expectedStr = `rgb(${expectedRgb.r}, ${expectedRgb.g}, ${expectedRgb.b})`;
+        return bgColor === expectedStr || bgColor.startsWith(expectedStr);
+      });
+
+      if (allCorrect) {
+        clearInterval(timerInterval);
+        const elapsedTime = 120 - timer;
+        const best = localStorage.getItem('fractionPuzzleBestTime');
+        if (!best || elapsedTime < parseInt(best)) {
+          localStorage.setItem('fractionPuzzleBestTime', String(elapsedTime));
+          loadBestTime();
+        }
+        setTimeout(() => {
+          alert(`تبریک! شما بازی را در ${toPersianDigits(String(elapsedTime))} ثانیه تمام کردید! 🎉`);
+        }, 300);
+      }
+    }
+
+    function hexToRgb(hex) {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : null;
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      timer = 120;
+      timerDisplay.textContent = toPersianDigits(String(timer));
+      timerInterval = setInterval(() => {
+        timer--;
+        timerDisplay.textContent = toPersianDigits(String(timer));
+        if (timer <= 0) {
+          clearInterval(timerInterval);
+          alert('زمان تمام شد! 🕒');
+        }
+      }, 1000);
+    }
+
+    function resetGame() {
+      selectedType = null;
+      prepareFractions();
+      renderGrid();
+      startTimer();
+    }
+
+    document.getElementById('btn-light').addEventListener('click', () => selectedType = 'light');
+    document.getElementById('btn-unit').addEventListener('click', () => selectedType = 'unit');
+    document.getElementById('btn-improper').addEventListener('click', () => selectedType = 'improper');
+    document.getElementById('btn-mixed').addEventListener('click', () => selectedType = 'mixed');
+
+    document.getElementById('btn-reset').addEventListener('click', resetGame);
+    document.getElementById('btn-guide').addEventListener('click', () => guideModal.style.display = 'flex');
+    document.getElementById('closeGuide').addEventListener('click', () => guideModal.style.display = 'none');
+
+    loadBestTime();
+    prepareFractions();
+    renderGrid();
+    startTimer();
+  </script>
+</body>
+</html>
