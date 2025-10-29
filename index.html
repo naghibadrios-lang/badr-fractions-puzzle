@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fa">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>🎯 بازی پازل کسرها — طراحی و ساخت: بدر</title>
+  <style>
+    :root{--bg:#0f1724;--card:#0b1220;--muted:#94a3b8;--accent:#60a5fa}
+    *{box-sizing:border-box;font-family:'Vazirmatn','Tahoma',sans-serif}
+    body{margin:0;background:linear-gradient(160deg,#071120 0%, #07172a 60%);color:#e6eef8;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+    .app{width:100%;max-width:1100px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+    .title{display:flex;align-items:center;gap:12px}
+    .logo{background:linear-gradient(90deg,#1E3A8A,#06B6D4);padding:10px 14px;border-radius:12px;font-weight:700}
+    h1{font-size:20px;margin:0}
+    .controls{display:flex;gap:10px;align-items:center}
+    .type-btn{padding:10px 14px;border-radius:10px;border:2px solid rgba(255,255,255,0.06);cursor:pointer;background:rgba(255,255,255,0.02);min-width:140px;text-align:center}
+    .type-btn.active{outline:3px solid rgba(255,255,255,0.06)}
+    .row-right{display:flex;gap:8px;align-items:center}
+    .small-btn{padding:8px 10px;border-radius:8px;border:none;cursor:pointer;background:#19233a;color:#eaf2ff}
+    main{display:grid;grid-template-columns:1fr 380px;gap:18px}
+    .board-card{background:linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:18px;border-radius:14px;box-shadow:0 6px 30px rgba(2,6,23,0.6)}
+    .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+    .cell{background:rgba(255,255,255,0.02);padding:18px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);min-height:62px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;cursor:pointer;transition:all .18s}
+    .cell.correct{filter:brightness(1.05);transform:scale(1.02);box-shadow:0 6px 18px rgba(0,0,0,0.5)}
+    .cell.wrong{animation:shake .3s}
+    @keyframes shake{0%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}100%{transform:translateX(0)}}
+    .c-red{background:rgba(239,68,68,0.12);border-color:rgba(239,68,68,0.25);color:#ffeaea}
+    .c-blue{background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.25);color:#e8f4ff}
+    .c-green{background:rgba(34,197,94,0.12);border-color:rgba(34,197,94,0.25);color:#f0fff4}
+    .c-yellow{background:rgba(250,204,21,0.12);border-color:rgba(250,204,21,0.25);color:#24210a}
+    .sidebar{background:linear-gradient(180deg,rgba(255,255,255,0.01),rgba(255,255,255,0.02));padding:16px;border-radius:12px}
+    .status{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+    .stat{display:flex;justify-content:space-between;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02)}
+    .hint{font-size:14px;color:var(--muted);line-height:1.4}
+    .footer{display:flex;justify-content:space-between;align-items:center;margin-top:10px;color:var(--muted);font-size:13px}
+    .help-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(0deg,rgba(2,6,23,0.6),rgba(2,6,23,0.6));backdrop-filter:blur(3px)}
+    .help-box{background:#071228;padding:22px;border-radius:12px;max-width:700px;width:92%}
+    .tag{font-size:13px;background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:8px}
+    @media (max-width:980px){main{grid-template-columns:1fr}} 
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">
+        <div class="logo">بدر</div>
+        <div>
+          <h1>پازل کسرها — تمرین تشخیص نوع کسر</h1>
+          <div style="color:var(--muted);font-size:13px">24 خانه — هر نوع کسر: ۶ مورد — طراحی و ساخت: بدر</div>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="type-btn" data-type="proper">کسر سبک (کوچکتر از واحد)</button>
+        <button class="type-btn" data-type="equal">کسر برابر واحد (۳/۳)</button>
+        <button class="type-btn" data-type="improper">کسر بزرگتر از واحد</button>
+        <button class="type-btn" data-type="mixed">عدد مخلوط</button>
+        <div class="row-right">
+          <button id="helpBtn" class="small-btn">راهنما</button>
+          <button id="startBtn" class="small-btn">شروع</button>
+          <button id="resetBtn" class="small-btn">شروع دوباره</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="board-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="font-weight:700">جدول بازی</div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="text-align:right"><div style="font-size:12px;color:var(--muted)">زمان</div><div id="timer" style="font-weight:800">00:00</div></div>
+            <div style="text-align:right"><div style="font-size:12px;color:var(--muted)">نمره</div><div id="score" style="font-weight:800">0 / 24</div></div>
+          </div>
+        </div>
+
+        <div class="grid" id="grid"></div>
+
+        <div class="footer">
+          <div class="hint">نحوه بازی: نوع کسر را انتخاب کن، سپس خانه‌ها را بزن تا رنگی شوند. اشتباه = هشدار!</div>
+          <div style="font-size:13px;opacity:.9">🎨 طراحی و ساخت توسط بدر</div>
+        </div>
+      </div>
+
+      <aside class="sidebar">
+        <div class="status">
+          <div class="stat"><div>کسر سبک</div><div class="tag">قرمز</div></div>
+          <div class="stat"><div>کسر برابر واحد</div><div class="tag">آبی</div></div>
+          <div class="stat"><div>کسر بزرگتر از واحد</div><div class="tag">سبز</div></div>
+          <div class="stat"><div>عدد مخلوط</div><div class="tag">زرد</div></div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <div id="help" style="display:none" class="help-modal">
+    <div class="help-box">
+      <h3>راهنمای بازی</h3>
+      <p style="color:var(--muted)">هدف: همهٔ خانه‌ها را بر اساس نوع کسر درست رنگ کن. با دکمه‌ها نوع کسر را انتخاب و سپس خانه‌ها را کلیک کن. با شروع دوباره جای کسرها تغییر می‌کند.</p>
+      <ul style="color:var(--muted)">
+        <li>کسر سبک — صورت < مخرج (قرمز)</li>
+        <li>کسر برابر واحد — <strong>۳/۳</strong> (آبی)</li>
+        <li>کسر بزرگتر از واحد — صورت > مخرج (سبز)</li>
+        <li>عدد مخلوط — مانند 1 1/2 (زرد)</li>
+      </ul>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:12px">
+        <button id="closeHelp" class="small-btn">بستن</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const proper=['1/2','2/5','3/8','4/7','5/6','7/10'];
+    const equal=['3/3','3/3','3/3','3/3','3/3','3/3'];
+    const improper=['5/3','7/4','9/5','8/3','11/6','10/7'];
+    const mixed=['1 1/2','2 2/3','3 1/4','4 1/3','1 3/5','2 1/6'];
+    const colors={proper:'c-red',equal:'c-blue',improper:'c-green',mixed:'c-yellow'};
+    let all=[];
+    function prepareAll(){all=[];proper.forEach(x=>all.push({type:'proper',label:x}));equal.forEach(x=>all.push({type:'equal',label:x}));improper.forEach(x=>all.push({type:'improper',label:x}));mixed.forEach(x=>all.push({type:'mixed',label:x}));}
+    function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}}
+    const grid=document.getElementById('grid');const scoreEl=document.getElementById('score');const timerEl=document.getElementById('timer');
+    let currentType=null;let correctCount=0;let timerInterval=null;let seconds=0;let started=false;
+    function formatTime(s){const mm=String(Math.floor(s/60)).padStart(2,'0');const ss=String(s%60).padStart(2,'0');return`${mm}:${ss}`;}
+    function startTimer(){if(timerInterval)return;timerInterval=setInterval(()=>{seconds++;timerEl.textContent=formatTime(seconds);},1000);}
+    function stopTimer(){clearInterval(timerInterval);timerInterval=null;}
+    function resetTimer(){stopTimer();seconds=0;timerEl.textContent='00:00';}
+    function renderGrid(){grid.innerHTML='';prepareAll();shuffle(all);all.forEach((item,i)=>{const el=document.createElement('div');el.className='cell';el.dataset.type=item.type;el.innerHTML=`<div>${item.label}</div>`;el.addEventListener('click',onCellClick);grid.appendChild(el);});correctCount=0;updateScore();}
+    function updateScore(){scoreEl.textContent=`${correctCount} / 24`;}
+    function onCellClick(e){if(!started)return;const el=e.currentTarget;if(el.classList.contains('correct'))return;const t=el.dataset.type;if(!currentType){flashMessage('نوع کسر را انتخاب کنید.');return;}if(t===currentType){el.classList.add('correct',colors[t]);correctCount++;updateScore();checkWin();}else{el.classList.add('wrong');setTimeout(()=>el.classList.remove('wrong'),350);flashMessage('اشتباه! این نوع کسر نیست.');}}
+    function checkWin(){if(correctCount===24){stopTimer();setTimeout(()=>alert(`آفرین 🎉 همه درست! زمان شما: ${formatTime(seconds)}`),150);}}
+    function flashMessage(txt){const toast=document.createElement('div');toast.textContent=txt;toast.style.position='fixed';toast.style.left='50%';toast.style.transform='translateX(-50%)';toast.style.bottom='26px';toast.style.padding='10px 16px';toast.style.borderRadius='10px';toast.style.background='rgba(0,0,0,0.7)';toast.style.color='#fff';toast.style.zIndex=9999;document.body.appendChild(toast);setTimeout(()=>{toast.style.opacity='0';setTimeout(()=>toast.remove(),300)},1500);}
+    document.querySelectorAll('.type-btn').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');currentType=btn.dataset.type;});});
+    document.getElementById('helpBtn').addEventListener('click',()=>document.getElementById('help').style.display='flex');
+    document.getElementById('closeHelp').addEventListener('click',()=>document.getElementById('help').style.display='none');
+    document.getElementById('resetBtn').addEventListener('click',()=>{resetTimer();started=false;stopTimer();document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));currentType=null;renderGrid();});
+    document.getElementById('startBtn').addEventListener('click',()=>{if(!started){started=true;startTimer();document.getElementById('startBtn').textContent='توقف';}else{started=false;stopTimer();document.getElementById('startBtn').textContent='شروع';}});
+    renderGrid();
+  </script>
+</body>
+</html>
